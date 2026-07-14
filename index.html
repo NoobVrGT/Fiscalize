@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fiscalize — Learn. Save. Grow.</title>
+    <meta
+      name="description"
+      content="Fiscalize helps teens build lifelong financial habits through personalized goals, gamified learning, behavioral finance, and interactive lessons that make managing money simple and enjoyable."
+    />
+    <meta name="theme-color" content="#1E3A5F" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fiscalize — Smart Money Habits Start Young" />
+    <meta
+      property="og:description"
+      content="Financial literacy doesn't have to be boring. Fiscalize makes learning about money fun through personalized goals, interactive lessons, and rewarding challenges."
+    />
+    <meta property="og:site_name" content="Fiscalize" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // Apply saved theme before first paint to avoid a flash of the wrong mode.
+      (function () {
+        var stored = localStorage.getItem("fiscalize-theme");
+        var dark =
+          stored === "dark" ||
+          (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
