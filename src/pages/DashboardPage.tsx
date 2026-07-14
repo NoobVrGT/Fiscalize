@@ -308,7 +308,16 @@ export default function DashboardPage() {
         {/* Charts */}
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           <Card>
-            <h2 className="font-display font-semibold text-navy-800 dark:text-white">Spending by Category</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display font-semibold text-navy-800 dark:text-white">Spending by Category</h2>
+              <Link
+                to="/expenses"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+              >
+                Expense tracker
+                <ArrowUpRight className="size-4" aria-hidden="true" />
+              </Link>
+            </div>
             <p className="mb-4 text-sm text-navy-400 dark:text-navy-300">All expenses, all time</p>
             <SpendingByCategoryChart />
           </Card>

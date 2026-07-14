@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, Moon, ReceiptText, Sun, X } from "lucide-react";
 import { useTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import Logo from "./Logo";
@@ -97,6 +97,13 @@ export default function Navbar() {
                 <LayoutDashboard className="size-4" aria-hidden="true" />
                 Dashboard
               </Link>
+              <Link
+                to="/expenses"
+                className="hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold text-navy-700 transition-colors hover:bg-navy-700/5 sm:inline-flex dark:text-navy-100 dark:hover:bg-white/10"
+              >
+                <ReceiptText className="size-4" aria-hidden="true" />
+                Expenses
+              </Link>
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -164,6 +171,14 @@ export default function Navbar() {
                       className="block rounded-xl px-4 py-3 font-medium text-navy-700 transition-colors hover:bg-navy-700/5 dark:text-navy-100 dark:hover:bg-white/10"
                     >
                       Transactions
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/expenses"
+                      className="block rounded-xl px-4 py-3 font-medium text-navy-700 transition-colors hover:bg-navy-700/5 dark:text-navy-100 dark:hover:bg-white/10"
+                    >
+                      Expenses
                     </Link>
                   </li>
                   <li className="pt-2">

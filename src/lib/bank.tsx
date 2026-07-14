@@ -14,6 +14,7 @@ import { onboardingStore, syncOnboardingToSupabase } from "./onboarding";
 import type {
   AccountRow,
   AccountType,
+  BudgetRow,
   GoalRow,
   LessonProgressRow,
   ProfileRow,
@@ -51,6 +52,12 @@ export interface Goal {
   targetAmount: number;
 }
 
+export interface Budget {
+  id: string;
+  category: string;
+  monthlyLimit: number;
+}
+
 export interface TransactionInput {
   accountId: string;
   name: string;
@@ -86,6 +93,12 @@ const parseGoal = (row: GoalRow): Goal => ({
   targetAmount: Number(row.target_amount),
 });
 
+const parseBudget = (row: BudgetRow): Budget => ({
+  id: row.id,
+  category: row.category,
+  monthlyLimit: Number(row.monthly_limit),
+});
+
 /* ------------------------------------------------------------------ */
 /* Context                                                             */
 /* ------------------------------------------------------------------ */
@@ -112,6 +125,11 @@ interface BankContextValue {
   savings: Account | null;
   transactions: Transaction[]; // newest first
   goals: Goal[];
+  budgets: Budget[];
+  /** True when the budgets table is missing (add_budgets.sql not run yet). */
+  budgetsUnavailable: boolean;
+  setBudget: (category: string, monthlyLimit: number) => Promise<string | null>;
+  removeBudget: (category: string) => Promise<string | null>;
   lessons: LessonProgressRow[];
   totalXp: number;
   completeLesson: (slug: string, xp: number) => Promise<string | null>;
@@ -137,6 +155,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgetsUnavailable, setBudgetsUnavailable] = useState(false);
   const [lessons, setLessons] = useState<LessonProgressRow[]>([]);
 
   const loadAll = useCallback(async () => {
@@ -151,16 +171,27 @@ export function BankProvider({ children }: { children: ReactNode }) {
       else onboardingStore.clearPendingSync();
     }
 
-    const [profileRes, accountsRes, txRes, goalsRes, lessonsRes] = await Promise.all([
+    const [profileRes, accountsRes, txRes, goalsRes, lessonsRes, budgetsRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase.from("accounts").select("*").order("type"),
       supabase.from("transactions").select("*"),
       supabase.from("goals").select("*").order("position"),
       supabase.from("lesson_progress").select("*"),
+      supabase.from("budgets").select("*"),
     ]);
 
     setProfile((profileRes.data as ProfileRow | null) ?? null);
     setLessons(((lessonsRes.data ?? []) as LessonProgressRow[]));
+
+    // Budgets were added after launch — degrade gracefully if the table
+    // hasn't been created in this Supabase project yet.
+    if (budgetsRes.error) {
+      setBudgetsUnavailable(true);
+      setBudgets([]);
+    } else {
+      setBudgetsUnavailable(false);
+      setBudgets(((budgetsRes.data ?? []) as BudgetRow[]).map(parseBudget));
+    }
 
     const firstError = accountsRes.error ?? txRes.error ?? goalsRes.error;
     if (firstError) {
@@ -202,6 +233,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
       setAccounts([]);
       setTransactions([]);
       setGoals([]);
+      setBudgets([]);
       setLessons([]);
       setLoading(true);
     }
@@ -289,6 +321,35 @@ export function BankProvider({ children }: { children: ReactNode }) {
       return null;
     },
     [loadAll],
+  );
+
+  const setBudget = useCallback(
+    async (category: string, monthlyLimit: number): Promise<string | null> => {
+      if (!user) return "Not signed in";
+      const { data, error: err } = await supabase
+        .from("budgets")
+        .upsert(
+          { user_id: user.id, category, monthly_limit: monthlyLimit },
+          { onConflict: "user_id,category" },
+        )
+        .select()
+        .single();
+      if (err) return err.message;
+      const parsed = parseBudget(data as BudgetRow);
+      setBudgets((prev) => [...prev.filter((b) => b.category !== category), parsed]);
+      return null;
+    },
+    [user],
+  );
+
+  const removeBudget = useCallback(
+    async (category: string): Promise<string | null> => {
+      const { error: err } = await supabase.from("budgets").delete().eq("category", category);
+      if (err) return err.message;
+      setBudgets((prev) => prev.filter((b) => b.category !== category));
+      return null;
+    },
+    [],
   );
 
   const completeLesson = useCallback(
@@ -411,6 +472,10 @@ export function BankProvider({ children }: { children: ReactNode }) {
         savings,
         transactions,
         goals,
+        budgets,
+        budgetsUnavailable,
+        setBudget,
+        removeBudget,
         lessons,
         totalXp: lessons.reduce((sum, l) => sum + l.xp_earned, 0),
         completeLesson,

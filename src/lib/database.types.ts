@@ -76,6 +76,15 @@ export interface GoalRow {
   created_at: string;
 }
 
+export interface BudgetRow {
+  id: string;
+  user_id: string;
+  /** One of TRANSACTION_CATEGORIES except 'Income' (you don't budget income). */
+  category: string;
+  monthly_limit: string | number;
+  created_at: string;
+}
+
 export interface LessonProgressRow {
   id: string;
   user_id: string;

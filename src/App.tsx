@@ -10,6 +10,7 @@ import LandingPage from "./pages/LandingPage";
 import StartPage from "./pages/StartPage";
 import DashboardPage from "./pages/DashboardPage";
 import TransactionsPage from "./pages/TransactionsPage";
+import ExpensesPage from "./pages/ExpensesPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
@@ -54,6 +55,7 @@ export default function App() {
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
               <Route path="/transactions" element={<Protected><TransactionsPage /></Protected>} />
+              <Route path="/expenses" element={<Protected><ExpensesPage /></Protected>} />
               <Route path="*" element={<LandingPage />} />
             </Routes>
           </MotionConfig>
