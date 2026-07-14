@@ -1,0 +1,18 @@
+# Netlify build configuration for Fiscalize
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# These are Vite *public* client values, safe to commit: the Supabase
+# publishable/anon key is designed to be exposed to browsers — Row Level
+# Security in the database is the actual access control. Never put the
+# service_role/secret key here.
+[build.environment]
+  VITE_SUPABASE_URL = "https://jleymwgtpgsmqobxjfrk.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "sb_publishable_ZAaK9kveFW7PxGOK16vqrA_xP8iEM5f"
+
+# Single-page app: serve index.html for all client-side routes.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
