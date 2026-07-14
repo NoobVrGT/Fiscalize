@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "Skill(dataviz)",
+      "Skill(dataviz:*)",
+      "PowerShell(node \"C:\\\\Users\\\\adamg\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\\\\2.1.205\\\\8667be26b4af74766e002299f579a877\\\\dataviz\\\\scripts\\\\validate_palette.js\" \"#2ECC71,#1E3A5F,#FFC857\" --mode light)",
+      "PowerShell(node \"C:\\\\Users\\\\adamg\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\\\\2.1.205\\\\8667be26b4af74766e002299f579a877\\\\dataviz\\\\scripts\\\\validate_palette.js\" \"#2ECC71,#3E6FA8,#FFC857\" --mode dark --surface \"#0C1826\")",
+      "PowerShell(node \"C:\\\\Users\\\\adamg\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\\\\2.1.205\\\\8667be26b4af74766e002299f579a877\\\\dataviz\\\\scripts\\\\validate_palette.js\" \"#1E9E55,#3F6FAE,#C08A1E\" --mode light)",
+      "PowerShell(node \"C:\\\\Users\\\\adamg\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\bundled-skills\\\\2.1.205\\\\8667be26b4af74766e002299f579a877\\\\dataviz\\\\scripts\\\\validate_palette.js\" \"#2BBF68,#6C9BD1,#D9A63C\" --mode dark --surface \"#0C1826\")"
+    ]
+  }
+}

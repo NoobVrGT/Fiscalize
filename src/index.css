@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand */
+  --color-emerald-50: #eafaf1;
+  --color-emerald-100: #d0f5e0;
+  --color-emerald-200: #a3ebc3;
+  --color-emerald-300: #6fdfa1;
+  --color-emerald-400: #45d683;
+  --color-emerald-500: #2ecc71;
+  --color-emerald-600: #24ab5d;
+  --color-emerald-700: #1e8c4d;
+  --color-emerald-800: #1a6e3e;
+  --color-emerald-900: #145530;
+
+  --color-navy-50: #f0f4f9;
+  --color-navy-100: #dce6f1;
+  --color-navy-200: #b8cbe1;
+  --color-navy-300: #8daccc;
+  --color-navy-400: #5f88b1;
+  --color-navy-500: #3f6a96;
+  --color-navy-600: #2e5179;
+  --color-navy-700: #1e3a5f;
+  --color-navy-800: #162c49;
+  --color-navy-900: #0c1826;
+  --color-navy-950: #070f19;
+
+  --color-gold-100: #fff3d6;
+  --color-gold-200: #ffe5ab;
+  --color-gold-300: #ffd67d;
+  --color-gold-400: #ffc857;
+  --color-gold-500: #f0b02e;
+  --color-gold-600: #cc8f14;
+  --color-gold-700: #a06d0b;
+
+  --color-surface: #f8fafc;
+
+  --shadow-soft: 0 4px 24px -6px rgb(30 58 95 / 0.12);
+  --shadow-lift: 0 12px 40px -12px rgb(30 58 95 / 0.25);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-slow: float 9s ease-in-out infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-14px);
+    }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  @apply bg-white font-sans text-navy-800 antialiased dark:bg-navy-950 dark:text-navy-100;
+}
+
+::selection {
+  @apply bg-emerald-500/30;
+}
+
+/* Visible, consistent keyboard focus everywhere (WCAG 2.4.7) */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-emerald-600 dark:outline-emerald-400;
+}
+
+/* Large-text accessibility mode, toggled from the footer */
+html.large-text {
+  font-size: 120%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@utility glass {
+  @apply border border-white/40 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-navy-900/70;
+}
+
+@utility text-gradient {
+  background-image: linear-gradient(100deg, #24ab5d, #1e8c4d 45%, #1e3a5f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dark .text-gradient {
+  background-image: linear-gradient(100deg, #45d683, #2ecc71 45%, #8daccc);
+}
