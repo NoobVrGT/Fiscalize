@@ -52,6 +52,11 @@ export default function ProfilePage() {
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
               Level {level.level} · {level.title}
             </span>
+            {profile?.is_admin && (
+              <span className="rounded-full bg-gold-100 px-3 py-1 text-sm font-bold text-gold-700 dark:bg-gold-500/15 dark:text-gold-300">
+                🛡️ Admin
+              </span>
+            )}
             <span className="truncate text-sm">{user?.email}</span>
           </p>
         </div>

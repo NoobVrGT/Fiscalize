@@ -38,6 +38,7 @@ export interface ProfileRow {
   interests: string[];
   referral_source: string | null;
   onboarding_completed: boolean;
+  is_admin?: boolean;
   theme: "light" | "dark";
   large_text: boolean;
   created_at: string;

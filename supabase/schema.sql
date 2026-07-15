@@ -310,3 +310,7 @@ create policy "challenge_completions_insert_own" on public.challenge_completions
 drop policy if exists "goals_update_own" on public.goals;
 create policy "goals_update_own" on public.goals for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+
+-- Admin flag (see add_admin.sql to grant it to an account)
+alter table public.profiles
+  add column if not exists is_admin boolean not null default false;
