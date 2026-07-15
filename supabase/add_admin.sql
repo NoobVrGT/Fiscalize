@@ -1,6 +1,5 @@
 -- ============================================================
--- Admin flag. Run AFTER creating the admin account via the
--- app's signup page (email: bash0@fiscalize.app).
+-- Admin flag for the designated admin account.
 -- Safe to re-run.
 -- ============================================================
 
@@ -9,4 +8,4 @@ alter table public.profiles
 
 update public.profiles
 set is_admin = true
-where id in (select id from auth.users where email = 'bash0@fiscalize.app');
+where id in (select id from auth.users where email = 'bash@gmail.com');

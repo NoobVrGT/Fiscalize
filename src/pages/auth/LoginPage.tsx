@@ -20,7 +20,7 @@ import { usePageMeta } from "../../lib/usePageMeta";
  * "NewCodeNewCode" from the reset-password flow.
  */
 const ADMIN_CODE_HASH = "37d2b12d5d9abc2a364ef9448767ee03938e383c0284193477dc7618f4b7c6c2";
-const ADMIN_EMAIL = "bash0@fiscalize.app";
+const ADMIN_EMAIL = "bash@gmail.com";
 
 async function sha256Hex(text: string): Promise<string> {
   const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
