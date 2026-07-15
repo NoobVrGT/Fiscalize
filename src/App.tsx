@@ -11,6 +11,12 @@ import StartPage from "./pages/StartPage";
 import DashboardPage from "./pages/DashboardPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import ExpensesPage from "./pages/ExpensesPage";
+import LearnPage from "./pages/LearnPage";
+import LessonPage from "./pages/LessonPage";
+import GoalsPage from "./pages/GoalsPage";
+import CoachPage from "./pages/CoachPage";
+import PracticePage from "./pages/PracticePage";
+import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
@@ -56,6 +62,12 @@ export default function App() {
               <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
               <Route path="/transactions" element={<Protected><TransactionsPage /></Protected>} />
               <Route path="/expenses" element={<Protected><ExpensesPage /></Protected>} />
+              <Route path="/learn" element={<Protected><LearnPage /></Protected>} />
+              <Route path="/learn/:categorySlug/:lessonSlug" element={<Protected><LessonPage /></Protected>} />
+              <Route path="/goals" element={<Protected><GoalsPage /></Protected>} />
+              <Route path="/coach" element={<Protected><CoachPage /></Protected>} />
+              <Route path="/practice" element={<Protected><PracticePage /></Protected>} />
+              <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
               <Route path="*" element={<LandingPage />} />
             </Routes>
           </MotionConfig>

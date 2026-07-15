@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -14,14 +15,19 @@ import { onboardingStore, syncOnboardingToSupabase } from "./onboarding";
 import type {
   AccountRow,
   AccountType,
+  AchievementRow,
   BudgetRow,
+  ChallengeCompletionRow,
   GoalRow,
   LessonProgressRow,
   ProfileRow,
+  QuizResultRow,
   TransactionCategory,
   TransactionRow,
   TransactionType,
 } from "./database.types";
+import { badgeBySlug, computeStreak, type BadgeDef } from "./gamification";
+import { QUIZ_XP, TOTAL_LESSONS } from "../content/lessons";
 
 /* ------------------------------------------------------------------ */
 /* Parsed domain models (numeric strings from PostgREST → numbers)     */
@@ -50,6 +56,8 @@ export interface Goal {
   id: string;
   name: string;
   targetAmount: number;
+  currentAmount: number;
+  deadline: string | null;
 }
 
 export interface Budget {
@@ -91,6 +99,8 @@ const parseGoal = (row: GoalRow): Goal => ({
   id: row.id,
   name: row.name,
   targetAmount: Number(row.target_amount),
+  currentAmount: Number(row.current_amount ?? 0),
+  deadline: row.deadline ?? null,
 });
 
 const parseBudget = (row: BudgetRow): Budget => ({
@@ -131,8 +141,22 @@ interface BankContextValue {
   setBudget: (category: string, monthlyLimit: number) => Promise<string | null>;
   removeBudget: (category: string) => Promise<string | null>;
   lessons: LessonProgressRow[];
+  quizResults: QuizResultRow[];
+  achievements: AchievementRow[];
+  challenges: ChallengeCompletionRow[];
+  /** True when the learning tables are missing (add_learning.sql not run yet). */
+  learningUnavailable: boolean;
   totalXp: number;
+  streak: number;
+  newBadge: BadgeDef | null;
+  dismissBadge: () => void;
   completeLesson: (slug: string, xp: number) => Promise<string | null>;
+  completeQuiz: (slug: string, score: number, total: number) => Promise<{ error: string | null; xpEarned: number }>;
+  completeChallenge: (slug: string, xp: number) => Promise<string | null>;
+  addGoal: (name: string, targetAmount: number, deadline: string | null) => Promise<string | null>;
+  updateGoal: (id: string, patch: Partial<Omit<Goal, "id">>) => Promise<string | null>;
+  deleteGoal: (id: string) => Promise<string | null>;
+  contributeToGoal: (id: string, amount: number) => Promise<string | null>;
   balanceOf: (accountId: string) => number;
   summary: BankSummary;
   addTransaction: (input: TransactionInput) => Promise<string | null>;
@@ -158,6 +182,12 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [budgetsUnavailable, setBudgetsUnavailable] = useState(false);
   const [lessons, setLessons] = useState<LessonProgressRow[]>([]);
+  const [quizResults, setQuizResults] = useState<QuizResultRow[]>([]);
+  const [achievements, setAchievements] = useState<AchievementRow[]>([]);
+  const [challenges, setChallenges] = useState<ChallengeCompletionRow[]>([]);
+  const [learningUnavailable, setLearningUnavailable] = useState(false);
+  const [newBadge, setNewBadge] = useState<BadgeDef | null>(null);
+  const awarding = useRef(false);
 
   const loadAll = useCallback(async () => {
     if (!user) return;
@@ -171,17 +201,35 @@ export function BankProvider({ children }: { children: ReactNode }) {
       else onboardingStore.clearPendingSync();
     }
 
-    const [profileRes, accountsRes, txRes, goalsRes, lessonsRes, budgetsRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-      supabase.from("accounts").select("*").order("type"),
-      supabase.from("transactions").select("*"),
-      supabase.from("goals").select("*").order("position"),
-      supabase.from("lesson_progress").select("*"),
-      supabase.from("budgets").select("*"),
-    ]);
+    const [profileRes, accountsRes, txRes, goalsRes, lessonsRes, budgetsRes, quizRes, achRes, chalRes] =
+      await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        supabase.from("accounts").select("*").order("type"),
+        supabase.from("transactions").select("*"),
+        supabase.from("goals").select("*").order("position"),
+        supabase.from("lesson_progress").select("*"),
+        supabase.from("budgets").select("*"),
+        supabase.from("quiz_results").select("*"),
+        supabase.from("achievements").select("*"),
+        supabase.from("challenge_completions").select("*"),
+      ]);
 
     setProfile((profileRes.data as ProfileRow | null) ?? null);
     setLessons(((lessonsRes.data ?? []) as LessonProgressRow[]));
+
+    // Learning tables shipped after launch — degrade gracefully until
+    // add_learning.sql has been run in this Supabase project.
+    if (quizRes.error || achRes.error || chalRes.error) {
+      setLearningUnavailable(true);
+      setQuizResults([]);
+      setAchievements([]);
+      setChallenges([]);
+    } else {
+      setLearningUnavailable(false);
+      setQuizResults((quizRes.data ?? []) as QuizResultRow[]);
+      setAchievements((achRes.data ?? []) as AchievementRow[]);
+      setChallenges((chalRes.data ?? []) as ChallengeCompletionRow[]);
+    }
 
     // Budgets were added after launch — degrade gracefully if the table
     // hasn't been created in this Supabase project yet.
@@ -235,6 +283,9 @@ export function BankProvider({ children }: { children: ReactNode }) {
       setGoals([]);
       setBudgets([]);
       setLessons([]);
+      setQuizResults([]);
+      setAchievements([]);
+      setChallenges([]);
       setLoading(true);
     }
   }, [user, loadAll]);
@@ -373,6 +424,89 @@ export function BankProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const completeQuiz = useCallback(
+    async (slug: string, score: number, total: number): Promise<{ error: string | null; xpEarned: number }> => {
+      if (!user) return { error: "Not signed in", xpEarned: 0 };
+      // XP only on the first attempt; retakes are recorded for stats.
+      const firstAttempt = !quizResults.some((q) => q.quiz_slug === slug);
+      const xpEarned = firstAttempt ? Math.round((QUIZ_XP * score) / total) : 0;
+      const { data, error: err } = await supabase
+        .from("quiz_results")
+        .insert({ user_id: user.id, quiz_slug: slug, score, total, xp_earned: xpEarned })
+        .select()
+        .single();
+      if (err) return { error: err.message, xpEarned: 0 };
+      setQuizResults((prev) => [...prev, data as QuizResultRow]);
+      return { error: null, xpEarned };
+    },
+    [user, quizResults],
+  );
+
+  const completeChallenge = useCallback(
+    async (slug: string, xp: number): Promise<string | null> => {
+      if (!user) return "Not signed in";
+      const { data, error: err } = await supabase
+        .from("challenge_completions")
+        .insert({ user_id: user.id, challenge_slug: slug, xp_earned: xp })
+        .select()
+        .single();
+      if (err) {
+        // Unique violation = already completed today; treat as success.
+        if (err.code === "23505") return null;
+        return err.message;
+      }
+      setChallenges((prev) => [...prev, data as ChallengeCompletionRow]);
+      return null;
+    },
+    [user],
+  );
+
+  const addGoal = useCallback(
+    async (name: string, targetAmount: number, deadline: string | null): Promise<string | null> => {
+      if (!user) return "Not signed in";
+      const { data, error: err } = await supabase
+        .from("goals")
+        .insert({ user_id: user.id, name, target_amount: targetAmount, deadline, position: goals.length })
+        .select()
+        .single();
+      if (err) return err.message;
+      setGoals((prev) => [...prev, parseGoal(data as GoalRow)]);
+      return null;
+    },
+    [user, goals.length],
+  );
+
+  const updateGoal = useCallback(
+    async (id: string, patch: Partial<Omit<Goal, "id">>): Promise<string | null> => {
+      const row: Record<string, unknown> = {};
+      if (patch.name !== undefined) row.name = patch.name;
+      if (patch.targetAmount !== undefined) row.target_amount = patch.targetAmount;
+      if (patch.currentAmount !== undefined) row.current_amount = patch.currentAmount;
+      if (patch.deadline !== undefined) row.deadline = patch.deadline;
+      const { data, error: err } = await supabase.from("goals").update(row).eq("id", id).select().single();
+      if (err) return err.message;
+      setGoals((prev) => prev.map((g) => (g.id === id ? parseGoal(data as GoalRow) : g)));
+      return null;
+    },
+    [],
+  );
+
+  const deleteGoal = useCallback(async (id: string): Promise<string | null> => {
+    const { error: err } = await supabase.from("goals").delete().eq("id", id);
+    if (err) return err.message;
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+    return null;
+  }, []);
+
+  const contributeToGoal = useCallback(
+    async (id: string, amount: number): Promise<string | null> => {
+      const goal = goals.find((g) => g.id === id);
+      if (!goal) return "Goal not found";
+      return updateGoal(id, { currentAmount: Math.round((goal.currentAmount + amount) * 100) / 100 });
+    },
+    [goals, updateGoal],
+  );
+
   const setStartingBalance = useCallback(
     async (accountId: string, value: number): Promise<string | null> => {
       const { error: err } = await supabase
@@ -392,6 +526,60 @@ export function BankProvider({ children }: { children: ReactNode }) {
 
   const checking = accounts.find((a) => a.type === "checking") ?? null;
   const savings = accounts.find((a) => a.type === "savings") ?? null;
+
+  const totalXp = useMemo(
+    () =>
+      lessons.reduce((s, l) => s + l.xp_earned, 0) +
+      quizResults.reduce((s, q) => s + q.xp_earned, 0) +
+      challenges.reduce((s, c) => s + c.xp_earned, 0),
+    [lessons, quizResults, challenges],
+  );
+
+  const streak = useMemo(
+    () =>
+      computeStreak([
+        ...lessons.map((l) => l.completed_at),
+        ...quizResults.map((q) => q.created_at),
+        ...challenges.map((c) => c.created_at),
+      ]),
+    [lessons, quizResults, challenges],
+  );
+
+  // Award any badges the user now deserves but hasn't earned yet.
+  useEffect(() => {
+    if (!user || loading || learningUnavailable || awarding.current) return;
+    const earned = new Set(achievements.map((a) => a.badge_slug));
+    const deserved = ["journey-begins"];
+    if (lessons.length >= 1) deserved.push("first-lesson");
+    if (lessons.length >= 10) deserved.push("finance-explorer");
+    if (lessons.length >= TOTAL_LESSONS) deserved.push("curriculum-champ");
+    if (quizResults.some((q) => q.total > 0 && q.score === q.total)) deserved.push("quiz-whiz");
+    if (budgets.length >= 1) deserved.push("first-budget");
+    if (goals.length >= 1) deserved.push("first-goal");
+    if (transactions.filter((t) => t.category === "Savings" || (savings !== null && t.accountId === savings.id && t.type === "income")).length >= 3) deserved.push("smart-saver");
+    if (streak >= 3) deserved.push("streak-3");
+    if (challenges.some((c) => c.challenge_slug === "budget-simulator")) deserved.push("budget-boss");
+    if (challenges.some((c) => c.challenge_slug === "investing-simulator")) deserved.push("investor");
+
+    const missing = deserved.filter((slug) => !earned.has(slug));
+    if (missing.length === 0) return;
+    awarding.current = true;
+    void (async () => {
+      for (const slug of missing) {
+        const { data } = await supabase
+          .from("achievements")
+          .insert({ user_id: user.id, badge_slug: slug })
+          .select()
+          .single();
+        if (data) {
+          setAchievements((prev) => [...prev, data as AchievementRow]);
+          const def = badgeBySlug(slug);
+          if (def && slug !== "journey-begins") setNewBadge(def);
+        }
+      }
+      awarding.current = false;
+    })();
+  }, [user, loading, learningUnavailable, achievements, lessons, quizResults, budgets, goals, transactions, savings, streak, challenges]);
 
   const balances = useMemo(() => {
     const map = new Map<string, number>();
@@ -477,8 +665,21 @@ export function BankProvider({ children }: { children: ReactNode }) {
         setBudget,
         removeBudget,
         lessons,
-        totalXp: lessons.reduce((sum, l) => sum + l.xp_earned, 0),
+        quizResults,
+        achievements,
+        challenges,
+        learningUnavailable,
+        totalXp,
+        streak,
+        newBadge,
+        dismissBadge: () => setNewBadge(null),
         completeLesson,
+        completeQuiz,
+        completeChallenge,
+        addGoal,
+        updateGoal,
+        deleteGoal,
+        contributeToGoal,
         balanceOf,
         summary,
         addTransaction,

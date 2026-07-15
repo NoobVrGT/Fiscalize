@@ -72,7 +72,35 @@ export interface GoalRow {
   user_id: string;
   name: string;
   target_amount: string | number;
+  current_amount?: string | number;
+  deadline?: string | null;
   position: number;
+  created_at: string;
+}
+
+export interface QuizResultRow {
+  id: string;
+  user_id: string;
+  quiz_slug: string;
+  score: number;
+  total: number;
+  xp_earned: number;
+  created_at: string;
+}
+
+export interface AchievementRow {
+  id: string;
+  user_id: string;
+  badge_slug: string;
+  earned_at: string;
+}
+
+export interface ChallengeCompletionRow {
+  id: string;
+  user_id: string;
+  challenge_slug: string;
+  challenge_date: string;
+  xp_earned: number;
   created_at: string;
 }
 

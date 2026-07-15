@@ -18,7 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import AppShell from "../components/AppShell";
 import Modal from "../components/Modal";
 import TransactionModal from "../components/bank/TransactionModal";
 import TransferModal from "../components/bank/TransferModal";
@@ -27,6 +27,8 @@ import { AccountActivityChart, SpendingByCategoryChart } from "../components/ban
 import { formatMoney, useBank, type Account } from "../lib/bank";
 import { inputClass, Field } from "../components/onboarding/fields";
 import { usePageMeta } from "../lib/usePageMeta";
+import { levelFromXp, moneySkillScore, todaysChallenge } from "../lib/gamification";
+import { Brain, Flame } from "lucide-react";
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
@@ -143,11 +145,35 @@ export default function DashboardPage() {
     transactions,
     goals,
     lessons,
+    quizResults,
+    budgets,
+    challenges,
     totalXp,
+    streak,
     completeLesson,
     summary,
   } = useBank();
   const [lessonBusy, setLessonBusy] = useState(false);
+
+  const level = levelFromXp(totalXp);
+  const challenge = todaysChallenge();
+  const challengeDone = challenges.some(
+    (c) => c.challenge_slug === challenge.slug && c.challenge_date === new Date().toISOString().slice(0, 10),
+  );
+  const quizAccuracy =
+    quizResults.length > 0
+      ? quizResults.reduce((s, q) => s + q.score / q.total, 0) / quizResults.length
+      : NaN;
+  const skillScore = moneySkillScore({
+    lessonsCompleted: lessons.length,
+    quizAccuracy,
+    hasBudget: budgets.length > 0,
+    savingsRate:
+      summary.monthlyIncome > 0
+        ? (summary.monthlyIncome - summary.monthlyExpenses) / summary.monthlyIncome
+        : 0,
+    streak,
+  });
 
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -172,8 +198,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Navbar />
-      <main id="main" className="mx-auto min-h-dvh max-w-7xl px-5 pb-24 pt-28 sm:px-8">
+      <AppShell wide>
         {error && (
           <p role="alert" className="mb-6 rounded-2xl bg-red-50 px-5 py-4 text-sm font-medium text-red-700 dark:bg-red-500/10 dark:text-red-300">
             Something went wrong loading your data: {error}
@@ -214,6 +239,96 @@ export default function DashboardPage() {
             </button>
           </div>
         </motion.div>
+
+        {/* Gamification strip */}
+        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+          <Card>
+            <div className="flex items-center justify-between">
+              <p className="font-display font-bold text-navy-800 dark:text-white">
+                Level {level.level} · {level.title}
+              </p>
+              <span className="flex items-center gap-1 text-sm font-bold text-gold-600 dark:text-gold-400">
+                <Zap className="size-4" aria-hidden="true" />
+                {totalXp} XP
+              </span>
+            </div>
+            <div
+              role="progressbar"
+              aria-valuenow={level.progressPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Level progress: ${level.xpIntoLevel} of ${level.xpForLevel} XP`}
+              className="mt-3 h-3 overflow-hidden rounded-full bg-navy-100 dark:bg-navy-700"
+            >
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
+                initial={{ width: 0 }}
+                animate={{ width: `${level.progressPct}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-navy-400 dark:text-navy-300">
+              {level.xpIntoLevel}/{level.xpForLevel} XP to Level {level.level + 1}
+            </p>
+            <div className="mt-3 flex gap-4 text-sm font-semibold">
+              <span className="flex items-center gap-1.5 text-navy-600 dark:text-navy-200">
+                <Flame className="size-4 text-gold-500" aria-hidden="true" />
+                {streak}-day streak
+              </span>
+              <span className="flex items-center gap-1.5 text-navy-600 dark:text-navy-200">
+                <Brain className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+                Skill score {skillScore}/100
+              </span>
+            </div>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-gold-600 dark:text-gold-400">
+                  Daily challenge
+                </p>
+                <p className="mt-1 font-display font-bold text-navy-800 dark:text-white">{challenge.title}</p>
+                <p className="mt-0.5 text-sm text-navy-500 dark:text-navy-200">{challenge.description}</p>
+              </div>
+              <Link
+                to="/practice"
+                className={`rounded-full px-5 py-2.5 text-sm font-semibold shadow-soft transition-all hover:-translate-y-0.5 ${
+                  challengeDone
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
+                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                }`}
+              >
+                {challengeDone ? "Done today ✓" : `Do it (+${challenge.xp} XP)`}
+              </Link>
+            </div>
+            {goals.length > 0 && (
+              <div className="mt-5 border-t border-navy-100 pt-4 dark:border-navy-700">
+                <div className="mb-1.5 flex justify-between text-sm">
+                  <span className="font-semibold text-navy-700 dark:text-navy-100">
+                    Current goal: {goals[0].name}
+                  </span>
+                  <span className="font-bold text-navy-600 dark:text-navy-200">
+                    {formatMoney(goals[0].currentAmount)} / {formatMoney(goals[0].targetAmount)}
+                  </span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-valuenow={Math.min(100, Math.round((goals[0].currentAmount / goals[0].targetAmount) * 100))}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${goals[0].name} progress`}
+                  className="h-2.5 overflow-hidden rounded-full bg-navy-100 dark:bg-navy-700"
+                >
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                    style={{ width: `${Math.min(100, Math.round((goals[0].currentAmount / goals[0].targetAmount) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
 
         {/* Balances */}
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -336,7 +451,9 @@ export default function DashboardPage() {
               Goal Progress
             </h2>
             <p className="mb-5 text-sm text-navy-400 dark:text-navy-300">
-              Measured against your savings balance
+              <Link to="/goals" className="font-semibold text-emerald-700 hover:underline dark:text-emerald-400">
+                Manage goals →
+              </Link>
             </p>
             {goals.length === 0 ? (
               <p className="py-6 text-sm text-navy-400 dark:text-navy-300">
@@ -349,7 +466,7 @@ export default function DashboardPage() {
             ) : (
               <ul className="space-y-5">
                 {goals.map((goal) => {
-                  const pct = Math.min(100, Math.round((summary.savingsBalance / goal.targetAmount) * 100));
+                  const pct = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
                   return (
                     <li key={goal.id}>
                       <div className="mb-1.5 flex justify-between text-sm">
@@ -424,8 +541,7 @@ export default function DashboardPage() {
           The Fiscalize Banking Simulator is a learning tool with virtual money only.
           It is not connected to any real bank or financial institution.
         </p>
-      </main>
-      <Footer />
+      </AppShell>
 
       <TransactionModal open={txModalOpen} onClose={() => setTxModalOpen(false)} />
       <TransferModal open={transferOpen} onClose={() => setTransferOpen(false)} />

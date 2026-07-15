@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, LogOut, Menu, Moon, ReceiptText, Sun, X } from "lucide-react";
+import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "../lib/theme";
 import { useAuth } from "../lib/auth";
 import Logo from "./Logo";
@@ -13,6 +13,15 @@ const NAV_LINKS = [
   { label: "About", hash: "#about" },
   { label: "FAQ", hash: "#faq" },
   { label: "Contact", hash: "#contact" },
+];
+
+const APP_LINKS = [
+  { label: "Home", to: "/dashboard" },
+  { label: "Learn", to: "/learn" },
+  { label: "Practice", to: "/practice" },
+  { label: "Goals", to: "/goals" },
+  { label: "Coach", to: "/coach" },
+  { label: "Profile", to: "/profile" },
 ];
 
 export default function Navbar() {
@@ -65,17 +74,32 @@ export default function Navbar() {
         <Logo />
 
         <ul className="hidden items-center gap-1 lg:flex">
-          {NAV_LINKS.map((link) => (
-            <li key={link.label}>
-              <button
-                type="button"
-                onClick={() => goTo(link.hash)}
-                className="rounded-full px-4 py-2 text-sm font-medium text-navy-600 transition-colors hover:bg-navy-700/5 hover:text-navy-800 dark:text-navy-200 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                {link.label}
-              </button>
-            </li>
-          ))}
+          {session
+            ? APP_LINKS.map((link) => (
+                <li key={link.label}>
+                  <Link
+                    to={link.to}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                      location.pathname === link.to
+                        ? "bg-emerald-600/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
+                        : "text-navy-600 hover:bg-navy-700/5 hover:text-navy-800 dark:text-navy-200 dark:hover:bg-white/10 dark:hover:text-white"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))
+            : NAV_LINKS.map((link) => (
+                <li key={link.label}>
+                  <button
+                    type="button"
+                    onClick={() => goTo(link.hash)}
+                    className="rounded-full px-4 py-2 text-sm font-medium text-navy-600 transition-colors hover:bg-navy-700/5 hover:text-navy-800 dark:text-navy-200 dark:hover:bg-white/10 dark:hover:text-white"
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              ))}
         </ul>
 
         <div className="flex items-center gap-2">
@@ -89,30 +113,14 @@ export default function Navbar() {
           </button>
 
           {session ? (
-            <>
-              <Link
-                to="/dashboard"
-                className="hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold text-navy-700 transition-colors hover:bg-navy-700/5 sm:inline-flex dark:text-navy-100 dark:hover:bg-white/10"
-              >
-                <LayoutDashboard className="size-4" aria-hidden="true" />
-                Dashboard
-              </Link>
-              <Link
-                to="/expenses"
-                className="hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold text-navy-700 transition-colors hover:bg-navy-700/5 sm:inline-flex dark:text-navy-100 dark:hover:bg-white/10"
-              >
-                <ReceiptText className="size-4" aria-hidden="true" />
-                Expenses
-              </Link>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="hidden items-center gap-1.5 rounded-full border border-navy-200 px-4 py-2.5 text-sm font-semibold text-navy-600 transition-colors hover:border-emerald-500 hover:text-emerald-700 sm:inline-flex dark:border-navy-600 dark:text-navy-200 dark:hover:text-emerald-400"
-              >
-                <LogOut className="size-4" aria-hidden="true" />
-                Log out
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="hidden items-center gap-1.5 rounded-full border border-navy-200 px-4 py-2.5 text-sm font-semibold text-navy-600 transition-colors hover:border-emerald-500 hover:text-emerald-700 lg:inline-flex dark:border-navy-600 dark:text-navy-200 dark:hover:text-emerald-400"
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+              Log out
+            </button>
           ) : (
             <Link
               to="/start"
